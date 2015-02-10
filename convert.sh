@@ -1,6 +1,7 @@
 #!/bin/bash
 # 批量视频压制脚本for linux
 
+cd "`dirname \"$0\"`"
 FFMPEG="ffmpeg"
 VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt" #视频编码参数
 AUDIO_OPTS="-c:a libfdk_aac -vbr 2" #音频编码参数
