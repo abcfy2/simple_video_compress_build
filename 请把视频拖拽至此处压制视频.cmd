@@ -5,14 +5,14 @@
 @set output=%~dpn1_enc
 
 set FFMPEG="ffmpeg"
-::视频编码参数
+::瑙嗛缂栫爜鍙傛暟
 set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt 
-::音频编码参数
+::闊抽缂栫爜鍙傛暟
 set AUDIO_OPTS=-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2 
-::缩放视频
+::缂╂斁瑙嗛
 ::set SCALE_OPTS="-vf scale=-1:720" 
 
-%FFMPEG% -y -i %input% %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% %output%.mp4
+%FFMPEG% -y -i %input% %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% "%output%.mp4"
 
 :next
 @shift /1
