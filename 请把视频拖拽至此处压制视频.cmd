@@ -5,11 +5,11 @@
 @set output=%~dpn1_enc
 
 set FFMPEG="ffmpeg"
-::瑙嗛缂栫爜鍙傛暟
+::视频编码参数
 set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt 
-::闊抽缂栫爜鍙傛暟
+::音频编码参数
 set AUDIO_OPTS=-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2 
-::缂╂斁瑙嗛(鑼冧緥涓虹缉鏀句负720p鐨勮棰戯紝-1浠ｈ〃鑷�傚簲)
+::缩放视频(范例为缩放为720p的视频，-1代表自适应)
 ::set SCALE_OPTS=-vf scale=-1:720 
 
 %FFMPEG% -y -i %input% %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% "%output%.mp4"
