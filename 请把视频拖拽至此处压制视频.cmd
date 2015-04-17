@@ -1,22 +1,23 @@
-@cd /d %~dp0
-:start
-@IF "%~1"=="" GOTO :end
-@set input=%1
-@set output=%~dpn1_enc
-
-set FFMPEG="ffmpeg"
+@echo off
+SETLOCAL ENABLEDELAYEDEXPANSION
+cd /d %~dp0
+set FFMPEG=ffmpeg
 ::视频编码参数
-set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt 
+set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt
 ::音频编码参数
-set AUDIO_OPTS=-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2 
+set AUDIO_OPTS=-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2
 ::缩放视频(范例为缩放为720p的视频，-1代表自适应)
-::set SCALE_OPTS=-vf scale=-1:720 
+::set SCALE_OPTS=-vf scale=-1:720
+set videolist=%*
+if not defined videolist set /P videolist=请输入要转码的视频路径,多个视频空格分割(可拖拽视频文件到终端): 
 
-%FFMPEG% -y -i %input% %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% "%output%.mp4"
-
-:next
-@shift /1
-@goto start
+:start
+for %%I in (%videolist%) do (
+    set input=%%I
+    set output=%%~dpnI_enc.mp4
+    %FFMPEG% -y -i !input! %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% "!output!" || echo 转码失败
+)
+echo 转码完成，如果有失败的请参考上面的错误信息解决
 
 :end
 @pause
