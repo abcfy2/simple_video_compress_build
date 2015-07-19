@@ -1,6 +1,11 @@
 #!/bin/bash
 
-[[ -f config ]] && . config || exit 1
+if [[ -f config ]]; then
+    . config
+else
+    echo "未找到config文件，请新建config文件，填入accesskey=, secretkey=, namespace=, 这三个变量值之后重试."
+    exit 1
+fi
 
 rm -fr "简易批量视频压制"
 mkdir "简易批量视频压制"
