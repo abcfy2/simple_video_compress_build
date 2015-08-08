@@ -3,9 +3,9 @@ SETLOCAL ENABLEDELAYEDEXPANSION
 cd /d %~dp0
 set FFMPEG=ffmpeg
 ::视频编码参数
-set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt
+set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p
 ::音频编码参数
-set AUDIO_OPTS=-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2
+set AUDIO_OPTS=-c:a libfdk_aac -vbr 2
 ::缩放视频(范例为缩放为720p的视频，-1代表自适应)
 ::set SCALE_OPTS=-vf scale=-1:720
 set videolist=%*
