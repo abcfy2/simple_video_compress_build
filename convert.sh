@@ -3,7 +3,9 @@
 
 selfpath="`dirname \"$0\"`"
 FFMPEG="ffmpeg"
-VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p" #视频编码参数
+# --crf 24 --preset 8 -r 6 -b 6 -i 1 --scenecut 60 -f 1:1 --qcomp 0.5 --psy-rd 0.3:0 --aq-mode 2 --aq-strength 0.8 --vf resize:960,540,,,,lanczos #小丸工具箱默参
+#VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p" #视频编码参数(旧)
+VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset 8 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p" #视频编码参数
 AUDIO_OPTS="-c:a libfdk_aac -vbr 2" #音频编码参数
 #SCALE_OPTS="-vf scale=-1:720" #缩放视频
 
