@@ -2,22 +2,26 @@
 SETLOCAL ENABLEDELAYEDEXPANSION
 cd /d %~dp0
 set FFMPEG=ffmpeg
-::ÊÓÆµ±àÂë²ÎÊı
-set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p
-::ÒôÆµ±àÂë²ÎÊı
+::è§†é¢‘ç¼–ç å‚æ•°
+::å°ä¸¸å·¥å…·ç®±é»˜å‚
+::--crf 24 --preset 8 -r 6 -b 6 -i 1 --scenecut 60 -f 1:1 --qcomp 0.5 --psy-rd 0.3:0 --aq-mode 2 --aq-strength 0.8 --vf resize:960,540,,,,lanczos
+::æ—§å‚æ•°
+::set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p
+set VIDEO_OPTS=-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p
+::éŸ³é¢‘ç¼–ç å‚æ•°
 set AUDIO_OPTS=-c:a libfdk_aac -vbr 2
-::Ëõ·ÅÊÓÆµ(·¶ÀıÎªËõ·ÅÎª720pµÄÊÓÆµ£¬-1´ú±í×ÔÊÊÓ¦)
+::ç¼©æ”¾è§†é¢‘(èŒƒä¾‹ä¸ºç¼©æ”¾ä¸º720pçš„è§†é¢‘ï¼Œ-1ä»£è¡¨è‡ªé€‚åº”)
 ::set SCALE_OPTS=-vf scale=-1:720
 set videolist=%*
-if not defined videolist set /P videolist=ÇëÊäÈëÒª×ªÂëµÄÊÓÆµÂ·¾¶,¶à¸öÊÓÆµ¿Õ¸ñ·Ö¸î(¿ÉÍÏ×§ÊÓÆµÎÄ¼şµ½ÖÕ¶Ë): 
+if not defined videolist set /P videolist=è¯·è¾“å…¥è¦è½¬ç çš„è§†é¢‘è·¯å¾„,å¤šä¸ªè§†é¢‘ç©ºæ ¼åˆ†å‰²(å¯æ‹–æ‹½è§†é¢‘æ–‡ä»¶åˆ°ç»ˆç«¯): 
 
 :start
 for %%I in (%videolist%) do (
     set input=%%I
     set output=%%~dpnI_enc.mp4
-    %FFMPEG% -y -i !input! %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% "!output!" || echo ×ªÂëÊ§°Ü
+    %FFMPEG% -y -i !input! %SCALE_OPTS% %VIDEO_OPTS% %AUDIO_OPTS% "!output!" || echo è½¬ç å¤±è´¥
 )
-echo ×ªÂëÍê³É£¬Èç¹ûÓĞÊ§°ÜµÄÇë²Î¿¼ÉÏÃæµÄ´íÎóĞÅÏ¢½â¾ö
+echo è½¬ç å®Œæˆï¼Œå¦‚æœæœ‰å¤±è´¥çš„è¯·å‚è€ƒä¸Šé¢çš„é”™è¯¯ä¿¡æ¯è§£å†³
 
 :end
 @pause
