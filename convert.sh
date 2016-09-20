@@ -6,8 +6,14 @@ FFMPEG="ffmpeg"
 # --crf 24 --preset 8 -r 6 -b 6 -i 1 --scenecut 60 -f 1:1 --qcomp 0.5 --psy-rd 0.3:0 --aq-mode 2 --aq-strength 0.8 --vf resize:960,540,,,,lanczos #小丸工具箱默参
 #VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p" #视频编码参数(旧)
 VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p" #视频编码参数
-AUDIO_OPTS="-c:a libfdk_aac -vbr 2" #音频编码参数
 #SCALE_OPTS="-vf scale=-1:720" #缩放视频
+
+if "${FFMPEG}" -codecs 2>/dev/null | grep -q libfdk_aac; then
+    AUDIO_OPTS="-c:a libfdk_aac -vbr 2" #音频编码参数
+else
+    echo "WARN: FFmpeg does not compile with libfdk_aac, fall back with aac encoder." >&2
+    AUDIO_OPTS="-c:a aac -strict -2 -aq 1" #音频编码参数
+fi
 
 if [[ $# -eq 0 ]]; then
     read -p "请输入要转码的视频路径,多个视频请用空格分割(可拖拽视频进入终端): " str
