@@ -7,7 +7,7 @@ $0 [-h|--help] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/t
 -h|--help    打印帮助
 --sub        启用字幕,会自动按照ass-ssa-srt的优先级进行匹配
 --subenc     字幕文件的编码,只有不是UTF-8才需要指定，ass/ssa不需要
---subsuffix  字幕后缀,不用带扩展名。如_zh,_cn等。默认""
+--subsuffix  字幕后缀,不用带扩展名,支持通配符。合法参数如_zh,tc*等。默认""
 --subdir     字幕所在路径,默认和视频在同一目录下
 --scale      缩放视频。如320:240,-1:720,-1:1080
 --videocopy  不转码视频,则视频相关的转码参数都将无效
@@ -33,7 +33,7 @@ parse_args() {
             SUBENC="$2"
             shift
             ;;
-        --subsufix)
+        --subsuffix)
             SUBSUFFIX="$2"
             shift
             ;;
@@ -92,7 +92,10 @@ find_subtitle() {
     sub_avaliable_extension="ass ssa srt"
 
     for sub_extension in $sub_avaliable_extension; do
-        find "${sub_dir}" -mindepth 1 -maxdepth 1 -iname "${video_base_name}*${SUBSUFFIX}.${sub_extension}" 2>/dev/null \
+        find "${sub_dir}" -mindepth 1 -maxdepth 1 \
+            -iname \
+            "${video_base_name:+$(echo ${video_base_name} | sed -r 's@([].*?\\[])@\\\1@g')}*${SUBSUFFIX}.${sub_extension}" \
+            2>/dev/null \
         | head -1 \
         | grep '.*' \
         && break
@@ -105,9 +108,9 @@ get_subtitle_opts() {
     sub_file_extension="${sub_file##*.}"
 
     if [ "${sub_file_extension,,}" = ass ]; then
-        echo "ass=${subfile//\'/\\\\\\\'}"
+        echo "ass='${subfile//\'/\\\\\\\'}'"
     else
-        sub_opts[${#sub_opts[@]}]="filename=${subfile//\'/\\\\\\\'}"
+        sub_opts[${#sub_opts[@]}]="filename='${subfile//\'/\\\\\\\'}'"
         [ -n "${SUBENC}" ] && sub_opts[${#sub_opts[@]}]="charenc=${SUBENC}"
         echo subtitles=$(str_join : "${sub_opts[@]}")
     fi
@@ -143,7 +146,7 @@ else
     if "${FFMPEG}" -codecs 2>/dev/null | grep -q libfdk_aac; then
         AUDIO_OPTS="-c:a libfdk_aac -vbr 2" #音频编码参数
     else
-        warn "FFmpeg does not compile with libfdk_aac, fall back with aac encoder."
+        warn "FFmpeg does not compile with libfdk_aac, fallback with aac encoder."
         AUDIO_OPTS="-c:a aac -strict -2 -aq 0.5" #音频编码参数
     fi
     
