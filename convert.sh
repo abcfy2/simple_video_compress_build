@@ -3,16 +3,17 @@
 
 help() {
     cat <<EOF
-$0 [-h|--help] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--opts "ffmpeg_opts"] video1 [video2 [... videon]]
--h|--help   打印帮助
---sub       启用字幕,会自动按照ass-ssa-srt的优先级进行匹配
---subenc    字幕文件的编码,只有不是UTF-8才需要指定，ass/ssa不需要
---subsuffix 字幕后缀,不用带扩展名。如_zh,_cn等。默认""
---subdir    字幕所在路径,默认和视频在同一目录下
---scale     缩放视频。如320:240,-1:720,-1:1080
---videocopy 不转码视频
---audiocopy 不转码音频
---opts      其他ffmpeg的输出参数
+$0 [-h|--help] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] video1 [video2 [... videon]]
+-h|--help    打印帮助
+--sub        启用字幕,会自动按照ass-ssa-srt的优先级进行匹配
+--subenc     字幕文件的编码,只有不是UTF-8才需要指定，ass/ssa不需要
+--subsuffix  字幕后缀,不用带扩展名。如_zh,_cn等。默认""
+--subdir     字幕所在路径,默认和视频在同一目录下
+--scale      缩放视频。如320:240,-1:720,-1:1080
+--videocopy  不转码视频,则视频相关的转码参数都将无效
+--audiocopy  不转码音频,则音频相关的转码参数都将无效
+--samplerate 音频采样率,如44100,22500等
+--opts       其他ffmpeg的输出参数
 EOF
 }
 
@@ -49,6 +50,10 @@ parse_args() {
             ;;
         --audiocopy)
             AUDIOCOPY=1
+            ;;
+        --samplerate)
+            SAMPLE_RATE="$2"
+            shift
             ;;
         --opts)
             FFMPEG_OPTS="$2"
@@ -141,6 +146,8 @@ else
         warn "FFmpeg does not compile with libfdk_aac, fall back with aac encoder."
         AUDIO_OPTS="-c:a aac -strict -2 -aq 0.5" #音频编码参数
     fi
+    
+    [ -n "${SAMPLE_RATE}" ] && AUDIO_OPTS="${AUDIO_OPTS} -ar ${SAMPLE_RATE}"
 fi
 
 if [[ ${#video_list[@]} -eq 0 ]]; then
