@@ -3,17 +3,19 @@
 
 help() {
     cat <<EOF
-$0 [-h|--help] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] video1 [video2 [... videon]]
--h|--help    打印帮助
---sub        启用字幕,会自动按照ass-ssa-srt的优先级进行匹配
---subenc     字幕文件的编码,只有不是UTF-8才需要指定，ass/ssa不需要
---subsuffix  字幕后缀,不用带扩展名,支持通配符。合法参数如_zh,tc*等。默认""
---subdir     字幕所在路径,默认和视频在同一目录下
---scale      缩放视频。如320:240,-1:720,-1:1080
---videocopy  不转码视频,则视频相关的转码参数都将无效
---audiocopy  不转码音频,则音频相关的转码参数都将无效
---samplerate 音频采样率,如44100,22500等
---opts       其他ffmpeg的输出参数
+$0 [-h|--help] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
+-h|--help     Print this help
+--sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
+--subenc      Set subtitles input character encoding. Only useful if not UTF-8. Useless if it's ass/ssa
+--subsuffix   Suffix of subtitles file name. Do not append file extension, and support globbing.
+              Valid arguments like _zh/tc*, etc. Default ""
+--subdir      Directory of subtitles. Default is the same directory as video
+--scale       Scale video. E.g 320:240,-1:720,-1:1080
+--videocopy   Copy video stream. Thus the convert video args are all inoperative
+--audiocopy   Copy audio stream. Thus the convert audio args are all inoperative
+--samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
+--opts        Other ffmpeg output args
+-d|--dir      Output director for all videos. Default is the same as every video
 EOF
 }
 
@@ -57,6 +59,10 @@ parse_args() {
             ;;
         --opts)
             FFMPEG_OPTS="$2"
+            shift
+            ;;
+        -d|--dir)
+            DIR="$2"
             shift
             ;;
         *)
@@ -124,8 +130,10 @@ convert_video() {
             && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
             || warn " Could not find any subtitles for video '${video}'"
         fi
-
-        "$FFMPEG" -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${video%.*}_enc.mp4"
+        
+        VIDEO_NAME=$(basename "${video}")
+        ${DIR:=$(dirname "${video}")}
+        "$FFMPEG" -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${DIR}/${VIDEO_NAME%.*}_enc.mp4"
     done
 }
 
@@ -154,7 +162,7 @@ else
 fi
 
 if [[ ${#video_list[@]} -eq 0 ]]; then
-    read -p "请输入要转码的视频路径,多个视频请用空格分割(可拖拽视频进入终端): " str
+    read -p "Please type the video path for converting. Multiple videos use space to split(Or you can drag and drop videos on this terminal): " str
     video_list=("${str[@]}")
 fi
 
