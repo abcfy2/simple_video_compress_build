@@ -132,7 +132,7 @@ convert_video() {
         fi
         
         VIDEO_NAME=$(basename "${video}")
-        ${DIR:=$(dirname "${video}")}
+        DIR=${DIR:-$(dirname "${video}")}
         "$FFMPEG" -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${DIR}/${VIDEO_NAME%.*}_enc.mp4"
     done
 }
