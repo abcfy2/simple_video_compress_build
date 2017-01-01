@@ -3,8 +3,9 @@
 
 help() {
     cat <<EOF
-$0 [-h|--help] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
+$0 [-h|--help] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
 -h|--help     Print this help
+--x265        Use libx265 instead of libx264 (extremely slow but compressed size is very small. Experimental)
 --sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
 --subenc      Set subtitles input character encoding. Only useful if not UTF-8. Useless if it's ass/ssa
 --subsuffix   Suffix of subtitles file name. Do not append file extension, and support globbing.
@@ -27,6 +28,9 @@ parse_args() {
         -h|--help)
             help
             exit
+            ;;
+        --x265)
+            ENABLE_X265=1
             ;;
         --sub)
             ENABLE_SUB=1
@@ -128,7 +132,7 @@ convert_video() {
             sub_file=$(find_subtitle "${video}")
             [ -n "${sub_file}" ] \
             && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
-            || warn " Could not find any subtitles for video '${video}'"
+            || warn "Could not find any subtitles for video '${video}'"
         fi
         
         VIDEO_NAME=$(basename "${video}")
@@ -143,9 +147,16 @@ selfpath="`dirname \"$0\"`"
 FFMPEG="ffmpeg"
 # --crf 24 --preset 8 -r 6 -b 6 -i 1 --scenecut 60 -f 1:1 --qcomp 0.5 --psy-rd 0.3:0 --aq-mode 2 --aq-strength 0.8 --vf resize:960,540,,,,lanczos #小丸工具箱默参
 #VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p" #视频编码参数(旧)
-[ "$VIDEOCOPY" = 1 ] && VIDEO_OPTS="-c:v copy" || \
-    VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p" #视频编码参数
-#SCALE_OPTS="-vf scale=-1:720" #缩放视频
+if [ "$VIDEOCOPY" = 1 ]; then
+    VIDEO_OPTS="-c:v copy"
+elif [ "${ENABLE_X265}" = 1 ]; then
+    "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
+    && VIDEO_OPTS="-c:v libx265 -preset slower -crf 28 -pix_fmt yuv420p" \
+    || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
+fi
+
+VIDEO_OPTS=${VIDEO_OPTS:-"-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"} #视频编码参数
+
 [ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
 
 if [ "$AUDIOCOPY" = 1 ]; then
