@@ -152,7 +152,7 @@ if [ "$VIDEOCOPY" = 1 ]; then
     VIDEO_OPTS="-c:v copy"
 elif [ "${ENABLE_X265}" = 1 ]; then
     "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
-    && VIDEO_OPTS="-c:v libx265 -preset slower -crf 28 -pix_fmt yuv420p10le" \
+    && VIDEO_OPTS="-c:v libx265 -preset slowe -crf 28 -pix_fmt yuv420p10le" \
     || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
 fi
 
