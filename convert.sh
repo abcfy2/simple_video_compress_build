@@ -137,6 +137,7 @@ convert_video() {
         
         VIDEO_NAME=$(basename "${video}")
         DIR=${DIR:-$(dirname "${video}")}
+        [ ! -d "${DIR}" ] && mkdir -p "${DIR}"
         "$FFMPEG" -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${DIR}/${VIDEO_NAME%.*}_enc.mp4"
     done
 }
@@ -151,7 +152,7 @@ if [ "$VIDEOCOPY" = 1 ]; then
     VIDEO_OPTS="-c:v copy"
 elif [ "${ENABLE_X265}" = 1 ]; then
     "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
-    && VIDEO_OPTS="-c:v libx265 -preset slower -crf 28 -pix_fmt yuv420p" \
+    && VIDEO_OPTS="-c:v libx265 -preset slower -crf 28 -pix_fmt yuv420p10le" \
     || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
 fi
 
