@@ -116,7 +116,7 @@ find_subtitle() {
     for sub_extension in $sub_avaliable_extension; do
         find "${sub_dir}" -mindepth 1 -maxdepth 1 \
             -iname \
-            "${video_base_name:+$(echo ${video_base_name} | sed -r 's@([].*?\\[])@\\\1@g')}*${SUBSUFFIX}.${sub_extension}" \
+            "${video_base_name:+$(echo "${video_base_name}" | sed -r 's@([].*?\\[])@\\\1@g')}*${SUBSUFFIX}.${sub_extension}" \
             2>/dev/null \
         | head -1 \
         | grep '.*' \
