@@ -3,7 +3,7 @@
 
 help() {
     cat <<EOF
-$0 [-h|--help] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
+$0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
 -h|--help     Print this help
 --x265        Use libx265 instead of libx264 (extremely slow but compressed size is very small. Experimental)
 --sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
@@ -17,12 +17,15 @@ $0 [-h|--help] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdi
 --samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
 --opts        Other ffmpeg output args
 -d|--dir      Output director for all videos. Default is the same as every video
+--loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
+--nostats     Disable print encoding progress/statistics.
 EOF
 }
 
 declare -a video_list
 
 parse_args() {
+    FFMPEG_PRE_OPTS="-hide_banner"
     while [ $# -gt 0 ]; do
         case "$1" in
         -h|--help)
@@ -69,6 +72,14 @@ parse_args() {
             DIR="$2"
             shift
             ;;
+        --loglevel)
+            LOGLEVEL="$2"
+            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -loglevel ${LOGLEVEL}"
+            shift
+            ;;
+        --nostats)
+            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -nostats"
+            ;;
         *)
             video_list[${#video_list[@]}]="$1"
             ;;
@@ -97,6 +108,7 @@ str_join() {
 find_subtitle() {
     video="$1"
     video_prefix="${video%.*}"
+    video_suffix="${video##*.}"
     video_base_name=$(basename "${video_prefix}")
     sub_dir="${SUBDIR:-$(dirname "${video}")}"
     sub_avaliable_extension="ass ssa srt"
@@ -108,8 +120,15 @@ find_subtitle() {
             2>/dev/null \
         | head -1 \
         | grep '.*' \
-        && break
+        && return
     done
+
+    # 对于后缀为mkv的视频，检测是否有内嵌字幕
+    if [ "${video_suffix,,}" = "mkv" ] && "${FFMPEG}" -i "$video" 2>&1 | grep -q 'Stream .*: Subtitle'; then
+        echo "Find embedded subtitles in ${video}. So use it." >&2
+        echo "${video}"
+        return
+    fi
 }
 
 get_subtitle_opts() {
@@ -136,9 +155,11 @@ convert_video() {
         fi
         
         VIDEO_NAME=$(basename "${video}")
-        DIR=${DIR:-$(dirname "${video}")}
-        [ ! -d "${DIR}" ] && mkdir -p "${DIR}"
-        "$FFMPEG" -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${DIR}/${VIDEO_NAME%.*}_enc.mp4"
+        OUTDIR=${DIR:-$(dirname "${video}")}
+        [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+        set -x
+        "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+        set +x
     done
 }
 
