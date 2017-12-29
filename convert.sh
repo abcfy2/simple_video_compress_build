@@ -3,7 +3,7 @@
 
 help() {
     cat <<EOF
-$0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
+$0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--framerate framerate] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-j|--join] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
 -h|--help     Print this help
 --x265        Use libx265 instead of libx264 (extremely slow but compressed size is very small. Experimental)
 --sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
@@ -12,10 +12,12 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
               Valid arguments like _zh/tc*, etc. Default ""
 --subdir      Directory of subtitles. Default is the same directory as video
 --scale       Scale video. E.g 320:240,-1:720,-1:1080
+--framerate   Set output video frame rates. E.g --framerate 25
 --videocopy   Copy video stream. Thus the convert video args are all inoperative
 --audiocopy   Copy audio stream. Thus the convert audio args are all inoperative
 --samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
 --opts        Other ffmpeg output args
+-j|join       Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
 -d|--dir      Output director for all videos. Default is the same as every video
 --loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
 --nostats     Disable print encoding progress/statistics.
@@ -54,6 +56,10 @@ parse_args() {
             SCALE="$2"
             shift
             ;;
+        --framerate)
+            FRAMERATE="$2"
+            shift
+            ;;
         --videocopy)
             VIDEOCOPY=1
             ;;
@@ -67,6 +73,9 @@ parse_args() {
         --opts)
             FFMPEG_OPTS="$2"
             shift
+            ;;
+        -j|--join)
+            JOIN=1
             ;;
         -d|--dir)
             DIR="$2"
@@ -146,21 +155,32 @@ get_subtitle_opts() {
 }
 
 convert_video() {
-    for video in "${video_list[@]}"; do
-        if [ "$ENABLE_SUB" = 1 ]; then
-            sub_file=$(find_subtitle "${video}")
-            [ -n "${sub_file}" ] \
-            && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
-            || warn "Could not find any subtitles for video '${video}'"
-        fi
-        
-        VIDEO_NAME=$(basename "${video}")
-        OUTDIR=${DIR:-$(dirname "${video}")}
+    if [ "$JOIN" = 1 ]; then
+        OUTDIR=${DIR:-.}
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+        tmp_list_file="${RANDOM}.txt"
+        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) > "${tmp_list_file}"
         set -x
-        "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+        "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -f concat -safe 0 -i "${tmp_list_file}" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/video_join.mp4"
+        rm -f "${tmp_list_file}"
         set +x
-    done
+    else
+        for video in "${video_list[@]}"; do
+            if [ "$ENABLE_SUB" = 1 ]; then
+                sub_file=$(find_subtitle "${video}")
+                [ -n "${sub_file}" ] \
+                && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
+                || warn "Could not find any subtitles for video '${video}'"
+            fi
+            
+            VIDEO_NAME=$(basename "${video}")
+            OUTDIR=${DIR:-$(dirname "${video}")}
+            [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+            set -x
+            "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+            set +x
+        done
+    fi
 }
 
 parse_args "$@"
@@ -180,6 +200,7 @@ fi
 VIDEO_OPTS=${VIDEO_OPTS:-"-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"} #视频编码参数
 
 [ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
+[ -n "${FRAMERATE}" ] && FRAMERATE_OPTS="-r ${FRAMERATE}"
 
 if [ "$AUDIOCOPY" = 1 ]; then
     AUDIO_OPTS="-c:a copy"
