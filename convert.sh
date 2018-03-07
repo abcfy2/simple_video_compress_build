@@ -3,9 +3,11 @@
 
 help() {
     cat <<EOF
-$0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--x265] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
+$0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--h265] [--hwencoder encoder] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
 -h|--help     Print this help
---x265        Use libx265 instead of libx264 (extremely slow but compressed size is very small. Experimental)
+--h265        Use h265 instead of h264 (extremely slow but compressed size is very small. Experimental)
+--hwencoder   Select one hardware encoder for encoding, default is using software. Avaliable encoders see below.
+              NOTE: You should know which encoder is supporting your GPU first.
 --sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
 --subenc      Set subtitles input character encoding. Only useful if not UTF-8. Useless if it's ass/ssa
 --subsuffix   Suffix of subtitles file name. Do not append file extension, and support globbing.
@@ -19,9 +21,13 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
 -d|--dir      Output director for all videos. Default is the same as every video
 --loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
 --nostats     Disable print encoding progress/statistics.
+
+Avaliable hardware encoders:
+$(${FFMPEG} -encoders 2> /dev/null | grep 'h264_' | awk '{print $2}' | cut -d_ -f2)
 EOF
 }
 
+FFMPEG="ffmpeg"
 declare -a video_list
 
 parse_args() {
@@ -32,8 +38,12 @@ parse_args() {
             help
             exit
             ;;
-        --x265)
-            ENABLE_X265=1
+        --h265)
+            ENABLE_h265=1
+            ;;
+        --hwencoder)
+            HWENCODER="$2"
+            shift
             ;;
         --sub)
             ENABLE_SUB=1
@@ -166,18 +176,31 @@ convert_video() {
 parse_args "$@"
 
 selfpath="`dirname \"$0\"`"
-FFMPEG="ffmpeg"
 # --crf 24 --preset 8 -r 6 -b 6 -i 1 --scenecut 60 -f 1:1 --qcomp 0.5 --psy-rd 0.3:0 --aq-mode 2 --aq-strength 0.8 --vf resize:960,540,,,,lanczos #小丸工具箱默参
 #VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p" #视频编码参数(旧)
 if [ "$VIDEOCOPY" = 1 ]; then
     VIDEO_OPTS="-c:v copy"
-elif [ "${ENABLE_X265}" = 1 ]; then
-    "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
-    && VIDEO_OPTS="-c:v libx265 -preset slow -crf 28 -pix_fmt yuv420p10le" \
-    || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
+elif [ "${ENABLE_h265}" = 1 ]; then
+    if [ -n "${HWENCODER}" ]; then
+        VIDEO_OPTS="-c:v hevc_${HWENCODER} -pix_fmt yuv420p10le"
+    else
+        "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
+        && VIDEO_OPTS="-c:v libx265 -preset slow -crf 28 -pix_fmt yuv420p10le" \
+        || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
+    fi
 fi
 
-VIDEO_OPTS=${VIDEO_OPTS:-"-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"} #视频编码参数
+if [ -z "${VIDEO_OPTS}" ]; then
+    if [ -n "${HWENCODER}" ]; then
+        VIDEO_OPTS="-c:v h264_${HWENCODER}"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp -preanalysis 1"
+        [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
+        [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
+	VIDEO_OPTS="${VIDEO_OPTS} -pix_fmt yuv420p"
+    else
+        VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
+    fi
+fi
 
 [ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
 
