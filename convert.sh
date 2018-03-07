@@ -14,10 +14,12 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
               Valid arguments like _zh/tc*, etc. Default ""
 --subdir      Directory of subtitles. Default is the same directory as video
 --scale       Scale video. E.g 320:240,-1:720,-1:1080
+--framerate   Set output video frame rates. E.g --framerate 25
 --videocopy   Copy video stream. Thus the convert video args are all inoperative
 --audiocopy   Copy audio stream. Thus the convert audio args are all inoperative
 --samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
 --opts        Other ffmpeg output args
+-j|join       Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
 -d|--dir      Output director for all videos. Default is the same as every video
 --loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
 --nostats     Disable print encoding progress/statistics.
@@ -64,6 +66,10 @@ parse_args() {
             SCALE="$2"
             shift
             ;;
+        --framerate)
+            FRAMERATE="$2"
+            shift
+            ;;
         --videocopy)
             VIDEOCOPY=1
             ;;
@@ -77,6 +83,9 @@ parse_args() {
         --opts)
             FFMPEG_OPTS="$2"
             shift
+            ;;
+        -j|--join)
+            JOIN=1
             ;;
         -d|--dir)
             DIR="$2"
@@ -156,21 +165,32 @@ get_subtitle_opts() {
 }
 
 convert_video() {
-    for video in "${video_list[@]}"; do
-        if [ "$ENABLE_SUB" = 1 ]; then
-            sub_file=$(find_subtitle "${video}")
-            [ -n "${sub_file}" ] \
-            && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
-            || warn "Could not find any subtitles for video '${video}'"
-        fi
-        
-        VIDEO_NAME=$(basename "${video}")
-        OUTDIR=${DIR:-$(dirname "${video}")}
+    if [ "$JOIN" = 1 ]; then
+        OUTDIR=${DIR:-.}
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+        tmp_list_file="${RANDOM}.txt"
+        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) > "${tmp_list_file}"
         set -x
-        "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+        "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -f concat -safe 0 -i "${tmp_list_file}" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/video_join.mp4"
+        rm -f "${tmp_list_file}"
         set +x
-    done
+    else
+        for video in "${video_list[@]}"; do
+            if [ "$ENABLE_SUB" = 1 ]; then
+                sub_file=$(find_subtitle "${video}")
+                [ -n "${sub_file}" ] \
+                && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
+                || warn "Could not find any subtitles for video '${video}'"
+            fi
+            
+            VIDEO_NAME=$(basename "${video}")
+            OUTDIR=${DIR:-$(dirname "${video}")}
+            [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+            set -x
+            "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+            set +x
+        done
+    fi
 }
 
 parse_args "$@"
@@ -193,7 +213,7 @@ fi
 if [ -z "${VIDEO_OPTS}" ]; then
     if [ -n "${HWENCODER}" ]; then
         VIDEO_OPTS="-c:v h264_${HWENCODER}"
-        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp -preanalysis 1"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
 	VIDEO_OPTS="${VIDEO_OPTS} -pix_fmt yuv420p"
@@ -203,6 +223,7 @@ if [ -z "${VIDEO_OPTS}" ]; then
 fi
 
 [ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
+[ -n "${FRAMERATE}" ] && FRAMERATE_OPTS="-r ${FRAMERATE}"
 
 if [ "$AUDIOCOPY" = 1 ]; then
     AUDIO_OPTS="-c:a copy"
