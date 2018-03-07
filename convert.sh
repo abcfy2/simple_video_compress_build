@@ -202,7 +202,7 @@ if [ "$VIDEOCOPY" = 1 ]; then
     VIDEO_OPTS="-c:v copy"
 elif [ "${ENABLE_h265}" = 1 ]; then
     if [ -n "${HWENCODER}" ]; then
-        VIDEO_OPTS="-c:v hevc_${HWENCODER} -pix_fmt yuv420p10le"
+        VIDEO_OPTS="-c:v hevc_${HWENCODER}"
     else
         "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
         && VIDEO_OPTS="-c:v libx265 -preset slow -crf 28 -pix_fmt yuv420p10le" \
@@ -216,7 +216,6 @@ if [ -z "${VIDEO_OPTS}" ]; then
         [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
-	VIDEO_OPTS="${VIDEO_OPTS} -pix_fmt yuv420p"
     else
         VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
     fi
