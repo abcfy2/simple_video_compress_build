@@ -24,8 +24,11 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
 --loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
 --nostats     Disable print encoding progress/statistics.
 
-Avaliable hardware encoders:
+Avaliable hardware encoders for h264:
 $(${FFMPEG} -encoders 2> /dev/null | grep 'h264_' | awk '{print $2}' | cut -d_ -f2)
+
+Avaliable hardware encoders for h265:
+$(${FFMPEG} -encoders 2> /dev/null | grep 'hevc_' | awk '{print $2}' | cut -d_ -f2)
 EOF
 }
 
@@ -217,7 +220,7 @@ if [ -z "${VIDEO_OPTS}" ]; then
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
     else
-        VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
+        VIDEO_OPTS="-c:v libx264 -crf:v 20 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
     fi
 fi
 
