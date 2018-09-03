@@ -190,7 +190,7 @@ convert_video() {
             OUTDIR=${DIR:-$(dirname "${video}")}
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
             set -x
-            "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
             set +x
         done
     fi
@@ -206,6 +206,10 @@ if [ "$VIDEOCOPY" = 1 ]; then
 elif [ "${ENABLE_h265}" = 1 ]; then
     if [ -n "${HWENCODER}" ]; then
         VIDEO_OPTS="-c:v hevc_${HWENCODER}"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
+        [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
+        [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
+        [ "${HWENCODER}" = vaapi ] && FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -hwaccel_output_format vaapi"
     else
         "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
         && VIDEO_OPTS="-c:v libx265 -preset slow -crf 28 -pix_fmt yuv420p10le" \
@@ -219,6 +223,7 @@ if [ -z "${VIDEO_OPTS}" ]; then
         [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
+        [ "${HWENCODER}" = vaapi ] && FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -hwaccel_output_format vaapi"
     else
         VIDEO_OPTS="-c:v libx264 -crf:v 20 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
     fi
