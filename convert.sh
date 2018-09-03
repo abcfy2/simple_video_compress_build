@@ -208,7 +208,7 @@ elif [ "${ENABLE_h265}" = 1 ]; then
         VIDEO_OPTS="-c:v hevc_${HWENCODER}"
         [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -profile main10 -rc constqp"
-        [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
+        [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower -load_plugin hevc_hw"
         [ "${HWENCODER}" = vaapi ] && FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -hwaccel_output_format vaapi"
     else
         "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
