@@ -158,13 +158,9 @@ get_subtitle_opts() {
     subfile=$1
     sub_file_extension="${sub_file##*.}"
 
-    if [ "${sub_file_extension,,}" = ass ]; then
-        echo "ass='${subfile//\'/\\\\\\\'}'"
-    else
-        sub_opts[${#sub_opts[@]}]="filename='${subfile//\'/\\\\\\\'}'"
-        [ -n "${SUBENC}" ] && sub_opts[${#sub_opts[@]}]="charenc=${SUBENC}"
-        echo subtitles=$(str_join : "${sub_opts[@]}")
-    fi
+    sub_opts[${#sub_opts[@]}]="filename='${subfile//\'/\\\\\\\'}'"
+    [ -n "${SUBENC}" ] && sub_opts[${#sub_opts[@]}]="charenc=${SUBENC}"
+    echo subtitles=$(str_join : "${sub_opts[@]}")
 }
 
 convert_video() {
