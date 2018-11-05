@@ -19,7 +19,7 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
 --audiocopy   Copy audio stream. Thus the convert audio args are all inoperative
 --samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
 --opts        Other ffmpeg output args
--j|join       Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
+-j|--join     Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
 -d|--dir      Output director for all videos. Default is the same as every video
 --loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
 --nostats     Disable print encoding progress/statistics.
