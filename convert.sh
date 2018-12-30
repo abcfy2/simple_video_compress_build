@@ -20,6 +20,7 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
 --samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
 --opts        Other ffmpeg output args
 -j|--join     Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
+-o|--out      Set specified out file name instead of "video_join.mp4" or "<name>_enc.mp4".
 -d|--dir      Output director for all videos. Default is the same as every video
 --loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
 --nostats     Disable print encoding progress/statistics.
@@ -89,6 +90,10 @@ parse_args() {
             ;;
         -j|--join)
             JOIN=1
+            ;;
+	-o|--out)
+            OUT="$2"
+            shift
             ;;
         -d|--dir)
             DIR="$2"
@@ -165,15 +170,14 @@ get_subtitle_opts() {
 
 convert_video() {
     if [ "$JOIN" = 1 ]; then
-        OUTDIR=${DIR:-.}
+        OUTDIR="${DIR:-.}"
+        OUT="${OUT:-video_join.mp4}"
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-        tmp_list_file="${RANDOM}.txt"
-        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) > "${tmp_list_file}"
         set -x
-        "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -f concat -safe 0 -i "${tmp_list_file}" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/video_join.mp4"
-        rm -f "${tmp_list_file}"
+	(for video in "${video_list[@]}"; do echo "file '${video}'"; done) | "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -protocol_whitelist "file,pipe" -f concat -safe 0 -i - $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT}"
         set +x
     else
+        [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
         for video in "${video_list[@]}"; do
             if [ "$ENABLE_SUB" = 1 ]; then
                 sub_file=$(find_subtitle "${video}")
@@ -186,7 +190,7 @@ convert_video() {
             OUTDIR=${DIR:-$(dirname "${video}")}
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
             set -x
-            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${VIDEO_NAME%.*}_enc.mp4"
+            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.mp4"}"
             set +x
         done
     fi
