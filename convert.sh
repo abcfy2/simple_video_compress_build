@@ -236,7 +236,7 @@ if [ "$AUDIOCOPY" = 1 ]; then
     AUDIO_OPTS="-c:a copy"
 else
     if "${FFMPEG}" -codecs 2>/dev/null | grep -q libfdk_aac; then
-        AUDIO_OPTS="-c:a libfdk_aac -vbr 2" #音频编码参数
+        AUDIO_OPTS="-c:a libfdk_aac -profile:a aac_he_v2 -vbr 4" #音频编码参数
     else
         warn "FFmpeg does not compile with libfdk_aac, fallback with aac encoder."
         AUDIO_OPTS="-c:a aac -strict -2 -q:a 1.5" #音频编码参数
