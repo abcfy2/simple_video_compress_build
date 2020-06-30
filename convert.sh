@@ -223,8 +223,9 @@ elif [ "${ENABLE_h265}" = 1 ]; then
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower -load_plugin hevc_hw"
         [ "${HWENCODER}" = vaapi ] && FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -hwaccel_output_format vaapi"
     else
+        # See: https://tieba.baidu.com/p/6627144750
         "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
-        && VIDEO_OPTS="-c:v libx265 -preset slow -crf 28 -pix_fmt yuv420p10le" \
+        && VIDEO_OPTS="-c:v libx265 -x265-params min-keyint=5:scenecut=50:open-gop=0:rc-lookahead=40:lookahead-slices=0:subme=3:merange=57:ref=4:max-merge=3:no-strong-intra-smoothing=1:no-sao=1:selective-sao=0:deblock=-2,-2:ctu=32:rdoq-level=2:psy-rdoq=1.0:early-skip=0:rd=6 -crf 28 -preset medium -pix_fmt yuv420p10le" \
         || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
     fi
 fi
