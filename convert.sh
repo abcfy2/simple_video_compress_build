@@ -5,7 +5,10 @@ help() {
     cat <<EOF
 $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--h265] [--hwencoder encoder] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
 -h|--help     Print this help
+--format      Use specified output format instead of mp4. E.g: mkv, avi, and so on.
+              NOTE: You should know which format supports your video and audio encoding.
 --h265        Use h265 instead of h264 (extremely slow but compressed size is very small. Experimental)
+--opus        Use opus instead of aac for audio encoding
 --hwencoder   Select one hardware encoder for encoding, default is using software. Avaliable encoders see below.
               NOTE: You should know which encoder is supporting your GPU first.
 --sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
@@ -38,14 +41,23 @@ declare -a video_list
 
 parse_args() {
     FFMPEG_PRE_OPTS="-hide_banner"
+    # Default format is mp4
+    OUTPUT_FORMAT="mp4"
     while [ $# -gt 0 ]; do
         case "$1" in
         -h|--help)
             help
             exit
             ;;
+        --format)
+            OUTPUT_FORMAT="$2"
+            shift
+            ;;
         --h265)
             ENABLE_h265=1
+            ;;
+	--opus)
+            ENABLE_OPUS=1
             ;;
         --hwencoder)
             HWENCODER="$2"
@@ -190,7 +202,7 @@ convert_video() {
             OUTDIR=${DIR:-$(dirname "${video}")}
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
             set -x
-            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.mp4"}"
+            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
             set +x
         done
     fi
@@ -234,12 +246,14 @@ fi
 
 if [ "$AUDIOCOPY" = 1 ]; then
     AUDIO_OPTS="-c:a copy"
+elif [ "$ENABLE_OPUS" = 1 ]; then
+    AUDIO_OPTS="-c:a libopus -application audio -strict -2"
 else
     if "${FFMPEG}" -codecs 2>/dev/null | grep -q libfdk_aac; then
-        AUDIO_OPTS="-c:a libfdk_aac -profile:a aac_he_v2 -vbr 4" #音频编码参数
+        AUDIO_OPTS="-c:a libfdk_aac -profile:a aac_he_v2 -vbr 3" #音频编码参数
     else
         warn "FFmpeg does not compile with libfdk_aac, fallback with aac encoder."
-        AUDIO_OPTS="-c:a aac -strict -2 -q:a 1.5" #音频编码参数
+        AUDIO_OPTS="-c:a aac -strict -2 -q:a 1 -profile:a aac_ltp -aac_coder twoloop" #音频编码参数
     fi
     
     [ -n "${SAMPLE_RATE}" ] && AUDIO_OPTS="${AUDIO_OPTS} -ar ${SAMPLE_RATE}"
