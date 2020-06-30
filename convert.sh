@@ -29,10 +29,10 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
 --nostats     Disable print encoding progress/statistics.
 
 Avaliable hardware encoders for h264:
-$(${FFMPEG} -encoders 2> /dev/null | grep 'h264_' | awk '{print $2}' | cut -d_ -f2)
+$(${FFMPEG} -encoders 2>/dev/null | grep 'h264_' | awk '{print $2}' | cut -d_ -f2)
 
 Avaliable hardware encoders for h265:
-$(${FFMPEG} -encoders 2> /dev/null | grep 'hevc_' | awk '{print $2}' | cut -d_ -f2)
+$(${FFMPEG} -encoders 2>/dev/null | grep 'hevc_' | awk '{print $2}' | cut -d_ -f2)
 EOF
 }
 
@@ -45,7 +45,7 @@ parse_args() {
     OUTPUT_FORMAT="mp4"
     while [ $# -gt 0 ]; do
         case "$1" in
-        -h|--help)
+        -h | --help)
             help
             exit
             ;;
@@ -56,7 +56,7 @@ parse_args() {
         --h265)
             ENABLE_h265=1
             ;;
-	--opus)
+        --opus)
             ENABLE_OPUS=1
             ;;
         --hwencoder)
@@ -100,14 +100,14 @@ parse_args() {
             FFMPEG_OPTS="$2"
             shift
             ;;
-        -j|--join)
+        -j | --join)
             JOIN=1
             ;;
-	-o|--out)
+        -o | --out)
             OUT="$2"
             shift
             ;;
-        -d|--dir)
+        -d | --dir)
             DIR="$2"
             shift
             ;;
@@ -122,8 +122,8 @@ parse_args() {
         *)
             video_list[${#video_list[@]}]="$1"
             ;;
-    esac
-    shift
+        esac
+        shift
     done
 }
 
@@ -134,12 +134,12 @@ warn() {
 
 # join字符串
 str_join() {
-    delim="$1"      # join delimiter
+    delim="$1" # join delimiter
     shift
-    oldIFS=$IFS   # save IFS, the field separator
+    oldIFS=$IFS # save IFS, the field separator
     IFS=$delim
     result="$*"
-    IFS=$oldIFS   # restore IFS
+    IFS=$oldIFS # restore IFS
     echo "$result"
 }
 
@@ -156,10 +156,10 @@ find_subtitle() {
         find "${sub_dir}" -mindepth 1 -maxdepth 1 \
             -iname \
             "${video_base_name:+$(echo "${video_base_name}" | sed -r 's@([].*?\\[])@\\\1@g')}*${SUBSUFFIX}.${sub_extension}" \
-            2>/dev/null \
-        | head -1 \
-        | grep '.*' \
-        && return
+            2>/dev/null |
+            head -1 |
+            grep '.*' &&
+            return
     done
 
     # 对于后缀为mkv的视频，检测是否有内嵌字幕
@@ -185,24 +185,27 @@ convert_video() {
         OUTDIR="${DIR:-.}"
         OUT="${OUT:-video_join.mp4}"
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+        [ -n "${FILTERS}" ] && FILTER_OPTS="-vf $(str_join , "${FILTERS[@]}")"
         set -x
-	(for video in "${video_list[@]}"; do echo "file '${video}'"; done) | "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -protocol_whitelist "file,pipe" -f concat -safe 0 -i - $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT}"
+        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) | "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -protocol_whitelist "file,pipe" -f concat -safe 0 -i - $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${FILTER_OPTS} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT}"
         set +x
     else
         [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
         for video in "${video_list[@]}"; do
             if [ "$ENABLE_SUB" = 1 ]; then
                 sub_file=$(find_subtitle "${video}")
-                [ -n "${sub_file}" ] \
-                && SUB_OPTS=$(get_subtitle_opts "${sub_file}") \
-                || warn "Could not find any subtitles for video '${video}'"
+                [ -n "${sub_file}" ] &&
+                    # Subtitles must insert to filters first
+                    FILTERS=("$(get_subtitle_opts "${sub_file}")" "${FILTERS[@]}") ||
+                    warn "Could not find any subtitles for video '${video}'"
             fi
-            
+
             VIDEO_NAME=$(basename "${video}")
             OUTDIR=${DIR:-$(dirname "${video}")}
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+            [ -n "${FILTERS}" ] && FILTER_OPTS="-vf $(str_join , "${FILTERS[@]}")"
             set -x
-            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${SUB_OPTS:+-vf "${SUB_OPTS}"} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
+            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${FILTER_OPTS} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
             set +x
         done
     fi
@@ -210,7 +213,8 @@ convert_video() {
 
 parse_args "$@"
 
-selfpath="`dirname \"$0\"`"
+selfpath="$(dirname \"$0\")"
+declare -a FILTERS
 # --crf 24 --preset 8 -r 6 -b 6 -i 1 --scenecut 60 -f 1:1 --qcomp 0.5 --psy-rd 0.3:0 --aq-mode 2 --aq-strength 0.8 --vf resize:960,540,,,,lanczos #小丸工具箱默参
 #VIDEO_OPTS="-c:v libx264 -crf:v 24 -preset:v veryslow -x264opts me=umh:subme=7:no-fast-pskip:cqm=jvt -pix_fmt yuv420p" #视频编码参数(旧)
 if [ "$VIDEOCOPY" = 1 ]; then
@@ -221,12 +225,15 @@ elif [ "${ENABLE_h265}" = 1 ]; then
         [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -profile main10 -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower -load_plugin hevc_hw"
-        [ "${HWENCODER}" = vaapi ] && FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -hwaccel_output_format vaapi"
+        [ "${HWENCODER}" = vaapi ] &&
+            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -vaapi_device /dev/dri/renderD128 -hwaccel_output_format vaapi" &&
+            VIDEO_OPTS="${VIDEO_OPTS} -b_depth 8 -qp 28" &&
+            FILTERS+=('format=nv12|vaapi' 'hwupload')
     else
         # See: https://tieba.baidu.com/p/6627144750
-        "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 \
-        && VIDEO_OPTS="-c:v libx265 -x265-params min-keyint=5:scenecut=50:open-gop=0:rc-lookahead=40:lookahead-slices=0:subme=3:merange=57:ref=4:max-merge=3:no-strong-intra-smoothing=1:no-sao=1:selective-sao=0:deblock=-2,-2:ctu=32:rdoq-level=2:psy-rdoq=1.0:early-skip=0:rd=6 -crf 28 -preset medium -pix_fmt yuv420p10le" \
-        || warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
+        "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 &&
+            VIDEO_OPTS="-c:v libx265 -x265-params min-keyint=5:scenecut=50:open-gop=0:rc-lookahead=40:lookahead-slices=0:subme=3:merange=57:ref=4:max-merge=3:no-strong-intra-smoothing=1:no-sao=1:selective-sao=0:deblock=-2,-2:ctu=32:rdoq-level=2:psy-rdoq=1.0:early-skip=0:rd=6 -crf 28 -preset medium -pix_fmt yuv420p10le" ||
+            warn "FFmpeg does not compile with libx265, fallback with libx264 encoder."
     fi
 fi
 
@@ -236,7 +243,10 @@ if [ -z "${VIDEO_OPTS}" ]; then
         [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
-        [ "${HWENCODER}" = vaapi ] && FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -hwaccel_output_format vaapi"
+        [ "${HWENCODER}" = vaapi ] &&
+            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -vaapi_device /dev/dri/renderD128 -hwaccel_output_format vaapi" &&
+            VIDEO_OPTS="${VIDEO_OPTS} -b_depth 8 -qp 23" &&
+            FILTERS+=('format=nv12|vaapi' 'hwupload')
     else
         VIDEO_OPTS="-c:v libx264 -crf:v 20 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
     fi
@@ -256,7 +266,7 @@ else
         warn "FFmpeg does not compile with libfdk_aac, fallback with aac encoder."
         AUDIO_OPTS="-c:a aac -strict -2 -b:a 96k -profile:a aac_ltp -aac_coder twoloop" #音频编码参数
     fi
-    
+
     [ -n "${SAMPLE_RATE}" ] && AUDIO_OPTS="${AUDIO_OPTS} -ar ${SAMPLE_RATE}"
 fi
 
