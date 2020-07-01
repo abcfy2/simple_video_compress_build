@@ -7,7 +7,7 @@ $0 [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [
 -h|--help     Print this help
 --format      Use specified output format instead of mp4. E.g: mkv, avi, and so on.
               NOTE: You should know which format supports your video and audio encoding.
---h265        Use h265 instead of h264 (extremely slow but compressed size is very small. Experimental)
+--h265        Use h265 instead of h264 (extremely slow but compressed size is very small)
 --opus        Use opus instead of aac for audio encoding
 --hwencoder   Select one hardware encoder for encoding, default is using software. Avaliable encoders see below.
               NOTE: You should know which encoder is supporting your GPU first.
@@ -205,7 +205,7 @@ convert_video() {
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
             [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
             set -x
-	    "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
+            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
             set +x
         done
     fi
@@ -222,7 +222,7 @@ if [ "$VIDEOCOPY" = 1 ]; then
 elif [ "${ENABLE_h265}" = 1 ]; then
     if [ -n "${HWENCODER}" ]; then
         VIDEO_OPTS="-c:v hevc_${HWENCODER}"
-        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -profile_tier high -preanalysis 1 -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -profile main10 -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower -load_plugin hevc_hw"
         [ "${HWENCODER}" = vaapi ] &&
@@ -240,7 +240,7 @@ fi
 if [ -z "${VIDEO_OPTS}" ]; then
     if [ -n "${HWENCODER}" ]; then
         VIDEO_OPTS="-c:v h264_${HWENCODER}"
-        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -profile:v high -preanalysis 1 -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
         [ "${HWENCODER}" = vaapi ] &&
