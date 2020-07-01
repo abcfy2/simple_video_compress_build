@@ -264,7 +264,7 @@ else
         AUDIO_OPTS="-c:a libfdk_aac -profile:a aac_he_v2 -vbr 3" #音频编码参数
     else
         warn "FFmpeg does not compile with libfdk_aac, fallback with aac encoder."
-        AUDIO_OPTS="-c:a aac -strict -2 -b:a 96k -profile:a aac_ltp -aac_coder twoloop" #音频编码参数
+        AUDIO_OPTS="-c:a aac -strict -2 -b:a 96k -profile:a aac_main -aac_coder twoloop" #音频编码参数
     fi
 
     [ -n "${SAMPLE_RATE}" ] && AUDIO_OPTS="${AUDIO_OPTS} -ar ${SAMPLE_RATE}"
