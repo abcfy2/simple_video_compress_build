@@ -185,9 +185,9 @@ convert_video() {
         OUTDIR="${DIR:-.}"
         OUT="${OUT:-video_join.mp4}"
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-        [ -n "${FILTERS}" ] && FILTER_OPTS="-vf $(str_join , "${FILTERS[@]}")"
+        [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
         set -x
-        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) | "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -protocol_whitelist "file,pipe" -f concat -safe 0 -i - $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${FILTER_OPTS} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT}"
+        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) | "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -protocol_whitelist "file,pipe" -f concat -safe 0 -i - $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT}"
         set +x
     else
         [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
@@ -203,9 +203,9 @@ convert_video() {
             VIDEO_NAME=$(basename "${video}")
             OUTDIR=${DIR:-$(dirname "${video}")}
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-            [ -n "${FILTERS}" ] && FILTER_OPTS="-vf $(str_join , "${FILTERS[@]}")"
+            [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
             set -x
-            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} ${FILTER_OPTS} $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
+	    "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
             set +x
         done
     fi
