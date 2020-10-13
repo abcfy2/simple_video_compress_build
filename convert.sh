@@ -191,17 +191,22 @@ convert_video() {
         set +x
     else
         [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
+        declare -a FILTERS_ORGIN=("${FILTERS[@]}")
         for video in "${video_list[@]}"; do
+            # reset FILTERS every loop
+            FILTERS=("${FILTERS_ORGIN[@]}")
             if [ "$ENABLE_SUB" = 1 ]; then
                 sub_file=$(find_subtitle "${video}")
-                [ -n "${sub_file}" ] &&
+                if [ -n "${sub_file}" ]; then
                     # Subtitles must insert to filters first
-                    FILTERS=("$(get_subtitle_opts "${sub_file}")" "${FILTERS[@]}") ||
+                    FILTERS=("$(get_subtitle_opts "${sub_file}")" "${FILTERS[@]}")
+                else
                     warn "Could not find any subtitles for video '${video}'"
+                fi
             fi
 
-            VIDEO_NAME=$(basename "${video}")
-            OUTDIR=${DIR:-$(dirname "${video}")}
+            VIDEO_NAME="$(basename "${video}")"
+            OUTDIR="${DIR:-$(dirname "${video}")}"
             [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
             [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
             set -x
