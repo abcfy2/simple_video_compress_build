@@ -183,37 +183,38 @@ get_subtitle_opts() {
 convert_video() {
     if [ "$JOIN" = 1 ]; then
         OUTDIR="${DIR:-.}"
-        OUT="${OUT:-video_join.mp4}"
+        OUT="${OUT:-video_join.${OUTPUT_FORMAT}}"
+        [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+        [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
+        concat_file="$(mktemp /tmp/concat.XXXXXX)"
+        for video in "${video_list[@]}"; do echo "file '${video}'" >>"${concat_file}"; done
+        video_list=("${concat_file}")
+        FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -protocol_whitelist file,pipe -f concat -safe 0"
+    fi
+    [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
+    declare -a FILTERS_ORGIN=("${FILTERS[@]}")
+    for video in "${video_list[@]}"; do
+        # reset FILTERS every loop
+        FILTERS=("${FILTERS_ORGIN[@]}")
+        if [ "$ENABLE_SUB" = 1 ]; then
+            sub_file=$(find_subtitle "${video}")
+            if [ -n "${sub_file}" ]; then
+                # Subtitles must insert to filters first
+                FILTERS=("$(get_subtitle_opts "${sub_file}")" "${FILTERS[@]}")
+            else
+                warn "Could not find any subtitles for video '${video}'"
+            fi
+        fi
+
+        VIDEO_NAME="$(basename "${video}")"
+        OUTDIR="${DIR:-$(dirname "${video}")}"
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
         [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
         set -x
-        (for video in "${video_list[@]}"; do echo "file '${video}'"; done) | "${FFMPEG}" ${FFMPEG_PRE_OPTS} -y -protocol_whitelist "file,pipe" -f concat -safe 0 -i - $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT}"
+        "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
         set +x
-    else
-        [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
-        declare -a FILTERS_ORGIN=("${FILTERS[@]}")
-        for video in "${video_list[@]}"; do
-            # reset FILTERS every loop
-            FILTERS=("${FILTERS_ORGIN[@]}")
-            if [ "$ENABLE_SUB" = 1 ]; then
-                sub_file=$(find_subtitle "${video}")
-                if [ -n "${sub_file}" ]; then
-                    # Subtitles must insert to filters first
-                    FILTERS=("$(get_subtitle_opts "${sub_file}")" "${FILTERS[@]}")
-                else
-                    warn "Could not find any subtitles for video '${video}'"
-                fi
-            fi
-
-            VIDEO_NAME="$(basename "${video}")"
-            OUTDIR="${DIR:-$(dirname "${video}")}"
-            [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-            [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
-            set -x
-            "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
-            set +x
-        done
-    fi
+    done
+    [ -n "${concat_file}" ] && rm -f "${concat_file}" || true
 }
 
 parse_args "$@"
