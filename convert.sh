@@ -36,7 +36,7 @@ $(${FFMPEG} -encoders 2>/dev/null | grep 'hevc_' | awk '{print $2}' | cut -d_ -f
 EOF
 }
 
-FFMPEG="ffmpeg"
+FFMPEG="${FFMPEG:-ffmpeg}"
 declare -a video_list
 
 parse_args() {
@@ -211,7 +211,7 @@ convert_video() {
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
         [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
         set -x
-        "${FFMPEG}" -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
+        "${FFMPEG}" -nostdin -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
         set +x
     done
     [ -n "${concat_file}" ] && rm -f "${concat_file}" || true
