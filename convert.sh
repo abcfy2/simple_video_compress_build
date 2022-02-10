@@ -172,12 +172,12 @@ find_subtitle() {
 
 get_subtitle_opts() {
     declare -a sub_opts
-    subfile=$1
+    subfile="$1"
     sub_file_extension="${sub_file##*.}"
 
     sub_opts[${#sub_opts[@]}]="filename='${subfile//\'/\\\\\\\'}'"
     [ -n "${SUBENC}" ] && sub_opts[${#sub_opts[@]}]="charenc=${SUBENC}"
-    echo subtitles=$(str_join : "${sub_opts[@]}")
+    echo subtitles="$(str_join : "${sub_opts[@]}")"
 }
 
 convert_video() {
