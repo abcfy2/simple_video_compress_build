@@ -232,7 +232,7 @@ elif [ "${ENABLE_h265}" = 1 ]; then
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -profile main10 -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower -load_plugin hevc_hw"
         [ "${HWENCODER}" = vaapi ] &&
-            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -vaapi_device /dev/dri/renderD128 -hwaccel_output_format vaapi" &&
+            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -init_hw_device vaapi=foo:/dev/dri/renderD128 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device foo" &&
             VIDEO_OPTS="${VIDEO_OPTS} -b_depth 8 -qp 28" &&
             FILTERS+=('format=nv12|vaapi' 'hwupload')
     else
@@ -250,7 +250,7 @@ if [ -z "${VIDEO_OPTS}" ]; then
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
         [ "${HWENCODER}" = vaapi ] &&
-            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -hwaccel vaapi -vaapi_device /dev/dri/renderD128 -hwaccel_output_format vaapi" &&
+            FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -init_hw_device vaapi=foo:/dev/dri/renderD128 -hwaccel vaapi -hwaccel_output_format vaapi -hwaccel_device foo" &&
             VIDEO_OPTS="${VIDEO_OPTS} -b_depth 8 -qp 23" &&
             FILTERS+=('format=nv12|vaapi' 'hwupload')
     else
