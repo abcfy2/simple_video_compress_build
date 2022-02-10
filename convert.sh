@@ -209,7 +209,7 @@ convert_video() {
         VIDEO_NAME="$(basename "${video}")"
         OUTDIR="${DIR:-$(dirname "${video}")}"
         [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-        [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
+        [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")") || unset FILTER_OPTS
         set -x
         "${FFMPEG}" -nostdin -y ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
         set +x
