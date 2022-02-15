@@ -258,6 +258,11 @@ if [ -z "${VIDEO_OPTS}" ]; then
     fi
 fi
 
+# force use vfr mode
+if [ ! "${VIDEOCOPY}" = 1 ]; then
+    VIDEO_OPTS="${VIDEO_OPTS} -vsync vfr"
+fi
+
 [ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
 [ -n "${FRAMERATE}" ] && FRAMERATE_OPTS="-r ${FRAMERATE}"
 
