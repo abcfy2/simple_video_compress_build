@@ -228,7 +228,7 @@ if [ "$VIDEOCOPY" = 1 ]; then
 elif [ "${ENABLE_h265}" = 1 ]; then
     if [ -n "${HWENCODER}" ]; then
         VIDEO_OPTS="-c:v hevc_${HWENCODER}"
-        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -profile_tier high -preanalysis 1 -rc cqp"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -profile main10 -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower -load_plugin hevc_hw"
         [ "${HWENCODER}" = vaapi ] &&
@@ -246,7 +246,7 @@ fi
 if [ -z "${VIDEO_OPTS}" ]; then
     if [ -n "${HWENCODER}" ]; then
         VIDEO_OPTS="-c:v h264_${HWENCODER}"
-        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -profile:v high -preanalysis 1 -rc cqp"
+        [ "${HWENCODER}" = amf ] && VIDEO_OPTS="${VIDEO_OPTS} -quality quality -rc cqp"
         [ "${HWENCODER}" = nvenc ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slow -rc constqp"
         [ "${HWENCODER}" = qsv ] && VIDEO_OPTS="${VIDEO_OPTS} -preset slower"
         [ "${HWENCODER}" = vaapi ] &&
