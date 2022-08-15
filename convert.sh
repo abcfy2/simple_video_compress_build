@@ -260,7 +260,7 @@ fi
 
 # force use vfr mode
 if [ ! "${VIDEOCOPY}" = 1 ]; then
-    VIDEO_OPTS="${VIDEO_OPTS} -vsync vfr"
+    VIDEO_OPTS="${VIDEO_OPTS} -fps_mode vfr"
 fi
 
 [ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
