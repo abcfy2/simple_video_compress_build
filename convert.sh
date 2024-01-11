@@ -53,7 +53,6 @@ parse_args() {
       ;;
     -n)
       OVERRIDE_OPTS=-n
-      shift
       ;;
     --format)
       OUTPUT_FORMAT="$2"
