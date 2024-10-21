@@ -1,10 +1,10 @@
 #!/bin/bash
 
 if [[ -f config ]]; then
-    . config
+  . config
 else
-    echo "未找到config文件，请新建config文件，填入accesskey=, secretkey=, namespace=, 这三个变量值之后重试."
-    exit 1
+  echo "未找到config文件，请新建config文件，填入accesskey=, secretkey=, namespace=, 这三个变量值之后重试."
+  exit 1
 fi
 
 rm -fr "简易批量视频压制"
@@ -16,13 +16,13 @@ echo "上传中,请稍后..."
 echo accesskey = $accesskey
 echo secretkey = $secretkey
 scope="$namespace:简易批量视频压制.7z"
-deadline=$((`date +%s` + 3600))
+deadline=$(($(date +%s) + 3600))
 putPolicy="{\"scope\":\"$scope\",\"deadline\":$deadline}"
 echo putPolicy = "$putPolicy"
-encodedPutPolicy=`echo -n "$putPolicy" | base64 -w0 | sed 's/\+/-/g; s/\//_/g'`
+encodedPutPolicy=$(echo -n "$putPolicy" | base64 -w0 | sed 's/\+/-/g; s/\//_/g')
 echo encodedPutPolicy = "$encodedPutPolicy"
-sign=`echo -n "$encodedPutPolicy" | openssl sha1 -hmac "$secretkey" | awk '{print $2}' | xxd -r -p`
-encodedSign=`echo -n "$sign" | base64 -w0 | sed 's/\+/-/g; s/\//_/g'`
+sign=$(echo -n "$encodedPutPolicy" | openssl sha1 -hmac "$secretkey" | awk '{print $2}' | xxd -r -p)
+encodedSign=$(echo -n "$sign" | base64 -w0 | sed 's/\+/-/g; s/\//_/g')
 echo encodedSign = $encodedSign
 uploadToken="$accesskey:$encodedSign:$encodedPutPolicy"
 echo uploadToken = $uploadToken
