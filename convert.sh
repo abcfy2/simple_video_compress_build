@@ -41,6 +41,12 @@ FFMPEG="${FFMPEG:-ffmpeg}"
 declare -a video_list
 OVERRIDE_OPTS=-y
 
+# Color codes
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+RESET='\033[0m'
+
 parse_args() {
   FFMPEG_PRE_OPTS="-hide_banner"
   # Default format is mp4
@@ -132,9 +138,16 @@ parse_args() {
   done
 }
 
-# 打印警告信息
 warn() {
-  echo -e '\033[1;33m'WARN: "$1" '\033[0m' >&2
+  echo -e "${YELLOW}WARN: $1${RESET}" >&2
+}
+
+error() {
+  echo -e "${RED}[ERROR] $1${RESET}" >&2
+}
+
+success() {
+  echo -e "${GREEN}[SUCCESS] $1${RESET}"
 }
 
 # join字符串
@@ -186,6 +199,11 @@ get_subtitle_opts() {
 }
 
 convert_video() {
+  local success_count=0
+  local failed_count=0
+  local total_count=${#video_list[@]}
+  local idx=0
+
   if [ "$JOIN" = 1 ]; then
     OUTDIR="${DIR:-.}"
     OUT="${OUT:-video_join.${OUTPUT_FORMAT}}"
@@ -195,16 +213,32 @@ convert_video() {
     for video in "${video_list[@]}"; do echo "file '${video}'" >>"${concat_file}"; done
     video_list=("${concat_file}")
     FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -protocol_whitelist file,pipe -f concat -safe 0"
+    echo ""
+    echo "========================================"
+    echo "[INFO] Join mode: merging ${total_count} videos..."
+    echo "========================================"
   fi
+
   [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
   declare -a FILTERS_ORGIN=("${FILTERS[@]}")
+
+  echo "[INFO] Found ${total_count} video(s)"
+
   for video in "${video_list[@]}"; do
-    # reset FILTERS every loop
+    idx=$((idx + 1))
     FILTERS=("${FILTERS_ORGIN[@]}")
+
+    if [ "$JOIN" != 1 ]; then
+      echo ""
+      echo "----------------------------------------"
+      echo "[${idx}/${total_count}] Processing: $(basename "${video}")"
+      echo "----------------------------------------"
+    fi
+
     if [ "$ENABLE_SUB" = 1 ]; then
       sub_file=$(find_subtitle "${video}")
       if [ -n "${sub_file}" ]; then
-        # Subtitles must insert to filters first
+        echo "[INFO] Found subtitle: ${sub_file}"
         FILTERS=("$(get_subtitle_opts "${sub_file}")" "${FILTERS[@]}")
       else
         warn "Could not find any subtitles for video '${video}'"
@@ -215,11 +249,38 @@ convert_video() {
     OUTDIR="${DIR:-$(dirname "${video}")}"
     [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
     [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")") || unset FILTER_OPTS
-    set -x
-    "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${OUTDIR}/${OUT-"${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}"}"
-    set +x
+
+    local output_file="${OUTDIR}/${OUT:-${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}}"
+    echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${video}\" ${SCALE_OPTS} ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
+    echo ""
+
+    if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}" 2>/dev/null; then
+      success "$(basename "${video}") -> $(basename "${output_file}")"
+      success_count=$((success_count + 1))
+    else
+      error "Failed: $(basename "${video}")"
+      failed_count=$((failed_count + 1))
+    fi
   done
+
   [ -n "${concat_file}" ] && rm -f "${concat_file}" || true
+
+  echo ""
+  echo "========================================"
+  if [ "$JOIN" = 1 ]; then
+    if [ ${failed_count} -eq 0 ]; then
+      success "Joined successfully!"
+    else
+      error "Join failed!"
+    fi
+  else
+    if [ ${failed_count} -eq 0 ]; then
+      echo -e "${GREEN}Done: ${success_count} success, ${failed_count} failed${RESET}"
+    else
+      echo -e "Done: ${success_count} success, ${RED}${failed_count} failed${RESET}"
+    fi
+  fi
+  echo "========================================"
 }
 
 parse_args "$@"
