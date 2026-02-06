@@ -301,6 +301,10 @@ elif [ "${ENABLE_h265}" = 1 ]; then
       FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -vaapi_device /dev/dri/renderD128" &&
       VIDEO_OPTS="${VIDEO_OPTS} -b_depth 8 -qp 28" &&
       FILTERS+=('format=nv12' 'hwupload')
+    [ "${HWENCODER}" = vulkan ] &&
+      FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -init_hw_device vulkan" &&
+      VIDEO_OPTS="${VIDEO_OPTS} -qp 23" &&
+      FILTERS+=('hwupload=derive_device=vulkan')
   else
     # See: https://tieba.baidu.com/p/6627144750
     "${FFMPEG}" -codecs 2>/dev/null | grep -q libx265 &&
@@ -319,6 +323,10 @@ if [ -z "${VIDEO_OPTS}" ]; then
       FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -vaapi_device /dev/dri/renderD128" &&
       VIDEO_OPTS="${VIDEO_OPTS} -b_depth 8 -qp 23" &&
       FILTERS+=('format=nv12' 'hwupload')
+    [ "${HWENCODER}" = vulkan ] &&
+      FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -init_hw_device vulkan" &&
+      VIDEO_OPTS="${VIDEO_OPTS} -qp 23" &&
+      FILTERS+=('hwupload=derive_device=vulkan')
   else
     VIDEO_OPTS="-c:v libx264 -crf:v 20 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
   fi
