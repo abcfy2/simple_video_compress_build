@@ -254,7 +254,7 @@ convert_video() {
     echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${video}\" ${SCALE_OPTS} ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
     echo ""
 
-    if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}" 2>/dev/null; then
+    if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}"; then
       success "$(basename "${video}") -> $(basename "${output_file}")"
       success_count=$((success_count + 1))
     else
