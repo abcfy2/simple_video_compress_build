@@ -67,7 +67,7 @@ convert.bat -j part1.mp4 part2.mp4 part3.mp4
 
 完整的脚本参数帮助可以通过 `-h | --help` 参数查看：
 
-```sh
+```txt
 ./convert.sh [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--h265] [--hwencoder encoder] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
 -h|--help     Print this help
 -n            Do not override existing files (Override by default)
@@ -114,6 +114,6 @@ vulkan
 ## 注意事项
 
 - `convert.sh` 支持更多高级功能（如字幕自动匹配）
-- Windows 下推荐使用 `convert.bat`
 - 两个脚本空参运行都将进入交互式模式（提示输入视频路径）
 - 颜色高亮输出需要终端支持 ANSI 转义码
+
