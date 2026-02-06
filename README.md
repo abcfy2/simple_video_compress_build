@@ -12,28 +12,7 @@
 convert.bat [options] video1 [video2 ...]
 ```
 
-### convert.bat 参数
-
-```
--h, --help      显示帮助信息
--n              不覆盖已存在的文件
---format fmt    输出格式（默认：mp4）
---h265          使用 H.265/HEVC 编码
---opus          使用 Opus 音频编码
---hwencoder e   硬件编码器（nvenc/amf/qsv）
---sub           启用字幕压制（ass > ssa > srt）
---subenc enc    设置字幕输入字符编码
---subsuffix s   字幕文件名后缀
---scale WxH     缩放视频（如：-1:720）
---framerate fps 设置输出视频帧率
---videocopy     直接复制视频流（不重新编码）
---audiocopy     直接复制音频流（不重新编码）
--j, --join      合并多个视频
--o file         指定输出文件名
--d dir          指定输出目录
-```
-
-### 使用示例
+### 使用示例 (Bat)
 
 ```batch
 :: 基本用法
@@ -62,47 +41,7 @@ convert.bat -j part1.mp4 part2.mp4 part3.mp4
 ./convert.sh [options] video1 [video2 [...]]
 ```
 
-### convert.sh 参数
-
-```
--h|--help     显示帮助
--n            不覆盖已存在的文件（默认覆盖）
---format      指定输出格式（默认：mp4）
---h265        使用 H.265 替代 H.264（压缩率更高但较慢）
---opus        使用 Opus 替代 AAC 音频编码
---hwencoder   选择硬件编码器（见下方可用选项）
---sub         启用字幕压制（匹配顺序：ass > ssa > srt）
---subenc      设置字幕输入字符编码
---subsuffix   字幕文件名后缀
---subdir      字幕文件目录（默认：与视频同目录）
---scale       缩放视频（如：320:240, -1:720, -1:1080）
---framerate   设置输出视频帧率
---videocopy   复制视频流（忽略视频编码参数）
---audiocopy   复制音频流（忽略音频编码参数）
---samplerate  音频采样率（如：44100, 48000）
---opts        其他 ffmpeg 输出参数
--j|--join     合并所有视频（要求编码格式相同）
--o|--out      指定输出文件名
--d|--dir      指定输出目录
---loglevel    设置 ffmpeg 日志级别
---nostats     禁用编码进度统计
-```
-
-### 硬件编码器支持
-
-**H.264 硬件编码器：**
-- nvenc（NVIDIA）
-- amf（AMD）
-- qsv（Intel）
-- vaapi
-
-**H.265/HEVC 硬件编码器：**
-- nvenc（NVIDIA）
-- amf（AMD）
-- qsv（Intel）
-- vaapi
-
-### 使用示例
+### 使用示例 (Bash)
 
 ```bash
 # 基本用法
@@ -122,6 +61,54 @@ convert.bat -j part1.mp4 part2.mp4 part3.mp4
 
 # 指定输出目录
 ./convert.sh -d /path/to/output video1.mp4 video2.mp4
+```
+
+## 脚本参数帮助
+
+完整的脚本参数帮助可以通过 `-h | --help` 参数查看：
+
+```sh
+./convert.sh [-h|--help] [--loglevel quiet|panic|fatal|error|warning|info|verbose|debug] [--nostats] [--h265] [--hwencoder encoder] [--sub] [--subenc charenc] [--subsuffix suffix] [--subdir /path/to/subdir] [--scale width:height] [--videocopy] [--audiocopy] [--samplerate <int>] [--opts "ffmpeg_opts"] [-d|--dir /path/to/output/dir/] video1 [video2 [... videon]]
+-h|--help     Print this help
+-n            Do not override existing files (Override by default)
+--format      Use specified output format instead of mp4. E.g: mkv, avi, and so on.
+              NOTE: You should know which format supports your video and audio encoding.
+--h265        Use h265 instead of h264 (extremely slow but compressed size is very small)
+--opus        Use opus instead of aac for audio encoding
+--hwencoder   Select one hardware encoder for encoding, default is using software. Avaliable encoders see below.
+              NOTE: You should know which encoder is supporting your GPU first.
+--sub         Enable subtitiles encoding. Matching order: ass > ssa > srt
+--subenc      Set subtitles input character encoding. Only useful if not UTF-8. Useless if it's ass/ssa
+--subsuffix   Suffix of subtitles file name. Do not append file extension, and support globbing.
+              Valid arguments like _zh/tc*, etc. Default ""
+--subdir      Directory of subtitles. Default is the same directory as video
+--scale       Scale video. E.g 320:240,-1:720,-1:1080
+--framerate   Set output video frame rates. E.g --framerate 25
+--videocopy   Copy video stream. Thus the convert video args are all inoperative
+--audiocopy   Copy audio stream. Thus the convert audio args are all inoperative
+--samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
+--opts        Other ffmpeg output args
+-j|--join     Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
+-o|--out      Set specified out file name instead of "video_join.mp4" or "<name>_enc.mp4".
+-d|--dir      Output director for all videos. Default is the same as every video
+--loglevel    Set ffmpeg loglevel. quiet|panic|fatal|error|warning|info|verbose|debug
+--nostats     Disable print encoding progress/statistics.
+
+Avaliable hardware encoders for h264:
+amf
+nvenc
+qsv
+v4l2m2m
+vaapi
+vulkan
+
+Avaliable hardware encoders for h265:
+amf
+nvenc
+qsv
+v4l2m2m
+vaapi
+vulkan
 ```
 
 ## 注意事项
