@@ -1,0 +1,12 @@
+[*.sh]
+indent_style = space
+indent_size = 2
+
+[*.bat]
+indent_style = space
+indent_size = 2
+
+[*.cmd]
+indent_style = space
+indent_size = 2
+

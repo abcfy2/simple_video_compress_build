@@ -205,18 +205,8 @@ convert_video() {
   local idx=0
 
   if [ "$JOIN" = 1 ]; then
-    OUTDIR="${DIR:-.}"
-    OUT="${OUT:-video_join.${OUTPUT_FORMAT}}"
-    [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-    [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
-    concat_file="$(mktemp /tmp/concat.XXXXXX)"
-    for video in "${video_list[@]}"; do echo "file '${video}'" >>"${concat_file}"; done
-    video_list=("${concat_file}")
-    FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -protocol_whitelist file,pipe -f concat -safe 0"
-    echo ""
-    echo "========================================"
-    echo "[INFO] Join mode: merging ${total_count} videos..."
-    echo "========================================"
+    do_join
+    return
   fi
 
   [ "${#video_list[@]}" -gt 1 ] && [ -n "${OUT}" ] && warn "set -o|--out for multiple videos doesn't allow." && unset OUT
@@ -228,12 +218,10 @@ convert_video() {
     idx=$((idx + 1))
     FILTERS=("${FILTERS_ORGIN[@]}")
 
-    if [ "$JOIN" != 1 ]; then
-      echo ""
-      echo "----------------------------------------"
-      echo "[${idx}/${total_count}] Processing: $(basename "${video}")"
-      echo "----------------------------------------"
-    fi
+    echo ""
+    echo "----------------------------------------"
+    echo "[${idx}/${total_count}] Processing: $(basename "${video}")"
+    echo "----------------------------------------"
 
     if [ "$ENABLE_SUB" = 1 ]; then
       sub_file=$(find_subtitle "${video}")
@@ -263,22 +251,57 @@ convert_video() {
     fi
   done
 
-  [ -n "${concat_file}" ] && rm -f "${concat_file}" || true
+  echo ""
+  echo "========================================"
+  if [ ${failed_count} -eq 0 ]; then
+    echo -e "${GREEN}Done: ${success_count} success, ${failed_count} failed${RESET}"
+  else
+    echo -e "Done: ${success_count} success, ${RED}${failed_count} failed${RESET}"
+  fi
+  echo "========================================"
+}
+
+do_join() {
+  local total_count=${#video_list[@]}
+  local failed_count=0
+
+  OUTDIR="${DIR:-.}"
+  OUT="${OUT:-video_join.${OUTPUT_FORMAT}}"
+  [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
+  [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
+
+  concat_file="$(mktemp /tmp/concat.XXXXXX)"
+  for video in "${video_list[@]}"; do
+    real_video="$(realpath "${video}" 2>/dev/null || readlink -f "${video}" 2>/dev/null || echo "${video}")"
+    echo "file '${real_video}'" >>"${concat_file}"
+  done
+
+  FFMPEG_PRE_OPTS="${FFMPEG_PRE_OPTS} -protocol_whitelist file,pipe -f concat -safe 0"
 
   echo ""
   echo "========================================"
-  if [ "$JOIN" = 1 ]; then
-    if [ ${failed_count} -eq 0 ]; then
-      success "Joined successfully!"
-    else
-      error "Join failed!"
-    fi
+  echo "[INFO] Join mode: merging ${total_count} videos..."
+  echo "========================================"
+
+  local output_file="${OUTDIR}/${OUT}"
+  echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${concat_file}\" ${SCALE_OPTS} ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
+  echo ""
+
+  if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "${concat_file}" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}"; then
+    success "Joined successfully!"
   else
-    if [ ${failed_count} -eq 0 ]; then
-      echo -e "${GREEN}Done: ${success_count} success, ${failed_count} failed${RESET}"
-    else
-      echo -e "Done: ${success_count} success, ${RED}${failed_count} failed${RESET}"
-    fi
+    error "Join failed!"
+    failed_count=1
+  fi
+
+  rm -f "${concat_file}"
+
+  echo ""
+  echo "========================================"
+  if [ ${failed_count} -eq 0 ]; then
+    echo -e "${GREEN}Done: 1 success, 0 failed${RESET}"
+  else
+    echo -e "Done: 0 success, ${RED}1 failed${RESET}"
   fi
   echo "========================================"
 }
