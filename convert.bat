@@ -284,7 +284,7 @@ if "!VIDEOCOPY!"=="1" (
       if /I "%HWENCODER%"=="vulkan" (
         set "FFMPEG_PRE_OPTS=!FFMPEG_PRE_OPTS! -init_hw_device vulkan"
         set "VIDEO_OPTS=!VIDEO_OPTS! -qp 23"
-        set "BASE_FILTERS=hwupload=derive_device=vulkan"
+        set "BASE_FILTERS=format=nv12,hwupload"
       )
     ) else (
       %FFMPEG% -hide_banner -codecs 2>nul | findstr /I "libx265" >nul
@@ -311,7 +311,7 @@ if not defined VIDEO_OPTS (
     if /I "%HWENCODER%"=="vulkan" (
       set "FFMPEG_PRE_OPTS=!FFMPEG_PRE_OPTS! -init_hw_device vulkan"
       set "VIDEO_OPTS=!VIDEO_OPTS! -qp 23"
-      set "BASE_FILTERS=hwupload=derive_device=vulkan"
+      set "BASE_FILTERS=format=nv12,hwupload"
     )
   ) else (
     set "VIDEO_OPTS=-c:v libx264 -crf:v 20 -preset 8 -subq 7 -refs 6 -bf 6 -keyint_min 1 -sc_threshold 60 -deblock 1:1 -qcomp 0.5 -psy-rd 0.3:0 -aq-mode 2 -aq-strength 0.8 -pix_fmt yuv420p"
