@@ -269,10 +269,9 @@ if "%ENABLE_h265%"=="1" (
     )
   ) else (
     :: Check for libx265 support
-    %FFMPEG% -codecs 2^>nul ^| findstr "libx265" ^>nul
-    if %errorlevel% equ 0 (
+    %FFMPEG% -codecs 2^>nul ^| findstr "libx265" ^>nul && (
       set VIDEO_OPTS=-c:v libx265 -x265-params min-keyint=5:scenecut=50:open-gop=0:rc-lookahead=40:lookahead-slices=0:subme=3:merange=57:ref=4:max-merge=3:no-strong-intra-smoothing=1:no-sao=1:selective-sao=0:deblock=-2,-2:ctu=32:rdoq-level=2:psy-rdoq=1.0:early-skip=0:rd=6 -crf 28 -preset medium -pix_fmt yuv420p10le
-    ) else (
+    ) || (
       echo %YELLOW%WARN: FFmpeg does not compile with libx265, fallback with libx264 encoder.%RESET%
     )
   )
@@ -311,10 +310,9 @@ if "%ENABLE_OPUS%"=="1" (
 )
 
 :: Check for libfdk_aac
-%FFMPEG% -codecs 2^>nul ^| findstr "libfdk_aac" ^>nul
-if %errorlevel% equ 0 (
+%FFMPEG% -codecs 2^>nul ^| findstr "libfdk_aac" ^>nul && (
   set AUDIO_OPTS=-c:a libfdk_aac -vbr 2
-) else (
+) || (
   echo %YELLOW%WARN: FFmpeg does not compile with libfdk_aac, fallback with aac encoder.%RESET%
   set AUDIO_OPTS=-c:a aac -strict -2 -q:a 0.5
 )
