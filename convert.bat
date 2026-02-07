@@ -63,10 +63,10 @@ echo --loglevel    Set ffmpeg loglevel. quiet^|panic^|fatal^|error^|warning^|inf
 echo --nostats     Disable print encoding progress/statistics.
 echo.
 echo Avaliable hardware encoders for h264:
-for /f "tokens=2" %%a in ('%FFMPEG% -encoders 2^>nul ^| findstr "h264_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
+for /f "tokens=2" %%a in ('%FFMPEG% -hide_banner -encoders 2^>nul ^| findstr "h264_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
 echo.
 echo Avaliable hardware encoders for h265:
-for /f "tokens=2" %%a in ('%FFMPEG% -encoders 2^>nul ^| findstr "hevc_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
+for /f "tokens=2" %%a in ('%FFMPEG% -hide_banner -encoders 2^>nul ^| findstr "hevc_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
 goto :end
 
 :main
@@ -102,8 +102,10 @@ if /I "%~1"=="--loglevel" (set FFMPEG_PRE_OPTS=%FFMPEG_PRE_OPTS% -loglevel %~2& 
 if /I "%~1"=="--nostats" (set FFMPEG_PRE_OPTS=%FFMPEG_PRE_OPTS% -nostats& shift & goto :parse_args)
 
 :: Handle video files (support glob patterns like *.mp4)
-set /a video_count=%video_count%+1
-call set "v_%video_count%=%~1"
+for %%G in ("%~1") do (
+  set /a video_count=%video_count%+1
+  call set "v_%%video_count%%=%%~G"
+)
 shift
 goto :parse_args
 
@@ -115,7 +117,7 @@ goto :start_process
 
 :detect_and_build_opts
 :: Check for libfdk_aac
-%FFMPEG% -codecs 2^>nul | findstr "libfdk_aac" >nul
+%FFMPEG% -hide_banner -codecs 2^>nul | findstr "libfdk_aac" >nul
 if %errorlevel% equ 0 (
   set AUDIO_OPTS=-c:a libfdk_aac -vbr 2
 ) else (
@@ -131,7 +133,7 @@ if "%ENABLE_h265%"=="1" (
     if /I "%HWENCODER%"=="nvenc" set VIDEO_OPTS=%VIDEO_OPTS% -preset slow -profile main10 -rc constqp
     if /I "%HWENCODER%"=="qsv" set VIDEO_OPTS=%VIDEO_OPTS% -preset slower -load_plugin hevc_hw
   ) else (
-    %FFMPEG% -codecs 2^>nul | findstr "libx265" >nul
+    %FFMPEG% -hide_banner -codecs 2^>nul | findstr "libx265" >nul
     if %errorlevel% equ 0 (
       set VIDEO_OPTS=-c:v libx265 -x265-params min-keyint=5:scenecut=50:open-gop=0:rc-lookahead=40:lookahead-slices=0:subme=3:merange=57:ref=4:max-merge=3:no-strong-intra-smoothing=1:no-sao=1:selective-sao=0:deblock=-2,-2:ctu=32:rdoq-level=2:psy-rdoq=1.0:early-skip=0:rd=6 -crf 28 -preset medium -pix_fmt yuv420p10le
     ) else (
