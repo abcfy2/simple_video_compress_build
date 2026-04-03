@@ -236,13 +236,13 @@ convert_video() {
     VIDEO_NAME="$(basename "${video}")"
     OUTDIR="${DIR:-$(dirname "${video}")}"
     [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-    [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")") || unset FILTER_OPTS
+    [ ${#FILTERS[@]} -gt 0 ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")") || unset FILTER_OPTS
 
     local output_file="${OUTDIR}/${OUT:-${VIDEO_NAME%.*}_enc.${OUTPUT_FORMAT}}"
-    echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${video}\" ${SCALE_OPTS} ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
+    echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${video}\" ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
     echo ""
 
-    if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "$video" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}"; then
+    if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "$video" $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}"; then
       success "$(basename "${video}") -> $(basename "${output_file}")"
       success_count=$((success_count + 1))
     else
@@ -268,7 +268,7 @@ do_join() {
   OUTDIR="${DIR:-.}"
   OUT="${OUT:-video_join.${OUTPUT_FORMAT}}"
   [ ! -d "${OUTDIR}" ] && mkdir -p "${OUTDIR}"
-  [ -n "${FILTERS}" ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")")
+  [ ${#FILTERS[@]} -gt 0 ] && FILTER_OPTS=("-vf" "$(str_join , "${FILTERS[@]}")") || unset FILTER_OPTS
 
   concat_file="$(mktemp /tmp/concat.XXXXXX)"
   for video in "${video_list[@]}"; do
@@ -284,10 +284,10 @@ do_join() {
   echo "========================================"
 
   local output_file="${OUTDIR}/${OUT}"
-  echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${concat_file}\" ${SCALE_OPTS} ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
+  echo "[CMD] ${FFMPEG} -nostdin ${OVERRIDE_OPTS} ${FFMPEG_PRE_OPTS} -i \"${concat_file}\" ${VIDEO_OPTS} ${FRAMERATE_OPTS} ${FILTER_OPTS[@]} ${AUDIO_OPTS} ${FFMPEG_OPTS} \"${output_file}\""
   echo ""
 
-  if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "${concat_file}" $SCALE_OPTS $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}"; then
+  if "${FFMPEG}" -nostdin "${OVERRIDE_OPTS}" ${FFMPEG_PRE_OPTS} -i "${concat_file}" $VIDEO_OPTS ${FRAMERATE_OPTS} "${FILTER_OPTS[@]}" $AUDIO_OPTS $FFMPEG_OPTS "${output_file}"; then
     success "Joined successfully!"
   else
     error "Join failed!"
@@ -360,7 +360,7 @@ if [ ! "${VIDEOCOPY}" = 1 ]; then
   VIDEO_OPTS="${VIDEO_OPTS} -fps_mode vfr"
 fi
 
-[ -n "$SCALE" ] && SCALE_OPTS="-vf scale=$SCALE"
+[ -n "$SCALE" ] && FILTERS=("scale=$SCALE" "${FILTERS[@]}")
 [ -n "${FRAMERATE}" ] && FRAMERATE_OPTS="-r ${FRAMERATE}"
 
 if [ "$AUDIOCOPY" = 1 ]; then

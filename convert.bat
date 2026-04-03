@@ -2,7 +2,6 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 chcp 65001 >nul 2>&1
-cd /d "%~dp0"
 
 for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
 set "RED=%ESC%[31m"
