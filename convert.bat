@@ -9,7 +9,14 @@ set "GREEN=%ESC%[32m"
 set "YELLOW=%ESC%[33m"
 set "RESET=%ESC%[0m"
 
-if not defined FFMPEG set "FFMPEG=ffmpeg"
+if not defined FFMPEG (
+  if exist "%~dp0ffmpeg.exe" (
+    set "FFMPEG=%~dp0ffmpeg.exe"
+  ) else (
+    set "FFMPEG=ffmpeg"
+  )
+)
+set "FFMPEG_CMD=%FFMPEG:"=%"
 
 set "OVERRIDE_OPTS=-y"
 set "OUTPUT_FORMAT=mp4"
@@ -228,17 +235,17 @@ echo --videocopy   Copy video stream. Thus the convert video args are all inoper
 echo --audiocopy   Copy audio stream. Thus the convert audio args are all inoperative
 echo --samplerate  Sample rate of audio. E.g 44100,22500, etc. Default is the same as origin audio
 echo --opts        Other ffmpeg output args
-echo -j^|--join    Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
-echo -o^|--out     Set specified out file name instead of "video_join.mp4" or "^<name^>_enc.mp4".
-echo -d^|--dir     Output director for all videos. Default is the same as every video
+echo -j^|--join     Join all videos(use ffmpeg concat demuxer). All videos MUST BE the same encodings.
+echo -o^|--out      Set specified out file name instead of "video_join.mp4" or "^<name^>_enc.mp4".
+echo -d^|--dir      Output director for all videos. Default is the same as every video
 echo --loglevel    Set ffmpeg loglevel. quiet^|panic^|fatal^|error^|warning^|info^|verbose^|debug
 echo --nostats     Disable print encoding progress/statistics.
 echo.
 echo Avaliable hardware encoders for h264:
-for /f "tokens=2" %%a in ('%FFMPEG% -hide_banner -encoders 2^>nul ^| findstr /I "h264_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
+for /f "tokens=2" %%a in ('call "!FFMPEG_CMD!" -hide_banner -encoders 2^>nul ^| findstr /I "h264_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
 echo.
 echo Avaliable hardware encoders for h265:
-for /f "tokens=2" %%a in ('%FFMPEG% -hide_banner -encoders 2^>nul ^| findstr /I "hevc_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
+for /f "tokens=2" %%a in ('call "!FFMPEG_CMD!" -hide_banner -encoders 2^>nul ^| findstr /I "hevc_"') do @for /f "tokens=2 delims=_" %%b in ("%%a") do @echo   %%b
 goto :end
 
 :append_video
@@ -286,7 +293,7 @@ if "!VIDEOCOPY!"=="1" (
         set "BASE_FILTERS=format=nv12,hwupload"
       )
     ) else (
-      %FFMPEG% -hide_banner -codecs 2>nul | findstr /I "libx265" >nul
+      "!FFMPEG_CMD!" -hide_banner -codecs 2>nul | findstr /I "libx265" >nul
       if not errorlevel 1 (
         set "VIDEO_OPTS=-c:v libx265 -x265-params min-keyint=5:scenecut=50:open-gop=0:rc-lookahead=40:lookahead-slices=0:subme=3:merange=57:ref=4:max-merge=3:no-strong-intra-smoothing=1:no-sao=1:selective-sao=0:deblock=-2,-2:ctu=32:rdoq-level=2:psy-rdoq=1.0:early-skip=0:rd=6 -crf 28 -preset medium -pix_fmt yuv420p10le"
       ) else (
@@ -317,7 +324,7 @@ if not defined VIDEO_OPTS (
   )
 )
 
-if not "!VIDEOCOPY!"=="1" set "VIDEO_OPTS=!VIDEO_OPTS! -fps_mode vfr"
+if not "!VIDEOCOPY!"=="1" if not defined FRAMERATE set "VIDEO_OPTS=!VIDEO_OPTS! -fps_mode vfr"
 
 if "!AUDIOCOPY!"=="1" (
   set "AUDIO_OPTS=-c:a copy"
@@ -325,7 +332,7 @@ if "!AUDIOCOPY!"=="1" (
   if "!ENABLE_OPUS!"=="1" (
     set "AUDIO_OPTS=-c:a libopus -b:a 64k -vbr on -strict -2"
   ) else (
-    %FFMPEG% -hide_banner -codecs 2>nul | findstr /I "libfdk_aac" >nul
+    "!FFMPEG_CMD!" -hide_banner -codecs 2>nul | findstr /I "libfdk_aac" >nul
     if not errorlevel 1 (
       set "AUDIO_OPTS=-c:a libfdk_aac -vbr 2"
     ) else (
@@ -415,20 +422,21 @@ if defined FRAMERATE set "FRAMERATE_OPTS=-r %FRAMERATE%"
 set "OUTPUT_PATH=!OUTDIR!\!OUTFILE!"
 
 if defined FILTERS (
-  echo [CMD] %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
+  echo [CMD] "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
   echo.
-  %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
+  "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
 ) else (
-  echo [CMD] %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
+  echo [CMD] "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
   echo.
-  %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
+  "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -i "!VIDEO_PATH!" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "!OUTPUT_PATH!"
 )
+set "FFMPEG_EXIT=!ERRORLEVEL!"
 
-if errorlevel 1 (
+if not "!FFMPEG_EXIT!"=="0" (
   call :error "Failed: !VIDEO_NAME!"
   set /a FAILED_COUNT+=1
 ) else (
-  call :success "!VIDEO_NAME! -> !OUTFILE!"
+  call :success "!VIDEO_NAME! encoded as !OUTFILE!"
   set /a SUCCESS_COUNT+=1
 )
 exit /b 0
@@ -461,7 +469,7 @@ for %%E in (ass ssa srt) do (
 if defined FIND_SUB_RESULT exit /b 0
 
 if /I "!FS_VIDEO_EXT!"==".mkv" (
-  %FFMPEG% -hide_banner -i "%~1" 2>&1 | findstr /R /C:"Stream .*: Subtitle" >nul
+  "!FFMPEG_CMD!" -hide_banner -i "%~1" 2>&1 | findstr /R /C:"Stream .*: Subtitle" >nul
   if not errorlevel 1 (
     >&2 echo Find embedded subtitles in %~1. So use it.
     set "FIND_SUB_RESULT=%~1"
@@ -512,16 +520,17 @@ echo ========================================
 
 set "OUTPUT_PATH=%OUTDIR%\%OUTFILE%"
 if defined FILTERS (
-  echo [CMD] %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
+  echo [CMD] "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
   echo.
-  %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
+  "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! -vf "!FILTERS!" !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
 ) else (
-  echo [CMD] %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
+  echo [CMD] "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
   echo.
-  %FFMPEG% -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
+  "!FFMPEG_CMD!" -nostdin %OVERRIDE_OPTS% %FFMPEG_PRE_OPTS% -protocol_whitelist file,pipe -f concat -safe 0 -i "%concat_file%" !VIDEO_OPTS! !FRAMERATE_OPTS! !AUDIO_OPTS! !FFMPEG_OPTS! "%OUTPUT_PATH%"
 )
+set "FFMPEG_EXIT=!ERRORLEVEL!"
 
-if errorlevel 1 (
+if not "!FFMPEG_EXIT!"=="0" (
   call :error "Join failed!"
   set "FAILED_COUNT=1"
   set "SUCCESS_COUNT=0"

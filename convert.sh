@@ -355,8 +355,8 @@ if [ -z "${VIDEO_OPTS}" ]; then
   fi
 fi
 
-# force use vfr mode
-if [ ! "${VIDEOCOPY}" = 1 ]; then
+# force use vfr mode unless the user explicitly requests a fixed output rate
+if [ ! "${VIDEOCOPY}" = 1 ] && [ -z "${FRAMERATE}" ]; then
   VIDEO_OPTS="${VIDEO_OPTS} -fps_mode vfr"
 fi
 
